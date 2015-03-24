@@ -1,1 +1,0 @@
-/usr/bin/c++    -fopenmp    CMakeFiles/TP1.dir/TP1.cpp.o  -o TP1 -rdynamic -L/usr/local/lib /usr/local/lib/libvisp.a -lX11 -lXext -lm -lpthread -Wl,-rpath,/usr/local/lib 

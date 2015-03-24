@@ -1,5 +1,0 @@
-/home/zokta/V3D/build/CMakeFiles/TP0.dir
-/home/zokta/V3D/build/CMakeFiles/TP1.dir
-/home/zokta/V3D/build/CMakeFiles/TP2.dir
-/home/zokta/V3D/build/CMakeFiles/TP3.dir
-/home/zokta/V3D/build/CMakeFiles/TP4.dir

@@ -1,1 +1,0 @@
-/usr/bin/c++    -fopenmp    CMakeFiles/TP3.dir/TP3.cpp.o  -o TP3 -rdynamic -L/usr/local/lib /usr/local/lib/libvisp.a -lX11 -lXext -lm -lpthread -Wl,-rpath,/usr/local/lib 
