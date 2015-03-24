@@ -1,0 +1,1 @@
+/usr/bin/c++    -fopenmp    CMakeFiles/TP4.dir/TP4.cpp.o  -o TP4 -rdynamic -L/usr/local/lib /usr/local/lib/libvisp.a -lX11 -lXext -lm -lpthread -Wl,-rpath,/usr/local/lib 
