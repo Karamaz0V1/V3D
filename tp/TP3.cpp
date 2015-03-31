@@ -16,19 +16,45 @@ void DLT(unsigned int n,
 	 vpImagePoint *p2,
 	 vpMatrix &H12)
 {
-  
-  // NBPTMIN points son necessaire ; remplace le 1e6 par ce nombre
+
+    // NBPTMIN points son necessaire ; remplace le 1e6 par ce nombre
 #define NBPTMIN 3 
-  if(n<    NBPTMIN )
-  {
+    if(n<    NBPTMIN )
+    {
     cout << "there must be at least " << NBPTMIN <<  " points in the both images\n" <<endl  ;
     throw ;
-  }
-  cout<<p1[0].get_u()<<" "<<p1[0].get_v()<<endl;
-  cout<<p2[0].get_u()<<" "<<p2[0].get_v()<<endl;
+    }
+    cout<<p1[0].get_u()<<" "<<p1[0].get_v()<<endl;
+    cout<<p2[0].get_u()<<" "<<p2[0].get_v()<<endl;
 
+    vpMatrix gamma(2*n,9);
 
+    for (int i=0; i<n; i++) {
+        gamma[i*2][0] = 0;
+        gamma[i*2][1] = 0; 
+        gamma[i*2][2] = 0; 
 
+        gamma[i*2][3] = -1 * p1[i].get_u(); 
+        gamma[i*2][4] = -1 * p1[i].get_v(); 
+        gamma[i*2][5] = -1; 
+
+        gamma[i*2][6] = p2[i].get_v() * p1[i].get_u(); 
+        gamma[i*2][7] = p2[i].get_v() * p1[i].get_v(); 
+        gamma[i*2][8] = p2[i].get_v(); 
+
+        gamma[i*2+1][0] = p1[i].get_u(); 
+        gamma[i*2+1][1] = p1[i].get_v(); 
+        gamma[i*2+1][2] = 1; 
+
+        gamma[i*2+1][3] = 0;
+        gamma[i*2+1][4] = 0; 
+        gamma[i*2+1][5] = 0; 
+
+        gamma[i*2+1][6] = -p2[i].get_u() * p1[i].get_u(); 
+        gamma[i*2+1][7] = -p2[i].get_u() * p1[i].get_v(); 
+        gamma[i*2+1][8] = -p2[i].get_u(); 
+
+    }
 }
 
 
