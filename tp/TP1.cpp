@@ -66,10 +66,15 @@ int main()
   cout << "gMo " << endl ;
   cout << gMo << endl ;
 
-  // I1d
-  vpHomogeneousMatrix dMo(0.1,0,2, 
-			  vpMath::rad(0),vpMath::rad(0),vpMath::rad(0)) ; 
-
+  // I1d décalage 10cm a droite de I1g
+  /*vpHomogeneousMatrix dMo(0.1,0,2, 
+			  vpMath::rad(0),vpMath::rad(0),vpMath::rad(0)) ; */
+  // I1d décalage 20cm devant I1g
+  /*vpHomogeneousMatrix dMo(0,0,1.8, 
+			  vpMath::rad(0),vpMath::rad(0),vpMath::rad(0)) ; */
+  // I1d décalage origine
+  vpHomogeneousMatrix dMo(0.1,0,1.9, 
+			  vpMath::rad(5),vpMath::rad(5),vpMath::rad(5)) ; 
   sim.setCameraPosition(dMo);
   sim.getImage(Id,cam);  
   cout << "Image I1d " <<endl ;
@@ -84,21 +89,22 @@ int main()
   vpDisplayX dd(Id,10,10,"Id") ;
   vpDisplay::display(Id) ;
   vpDisplay::flush(Id) ;
-
-  vpImagePoint pd ; 
+    
+   ////*POUR POINT DANS ID ET LIGNE DANS IG*////
+    vpImagePoint pd ; 
   
-      vpMatrix k=cam.get_K();
-      vpMatrix invK=cam.get_K_inverse();
-      vpMatrix transInvK=invK.transpose();
-      vpHomogeneousMatrix dTg = dMo*gMo.inverse();
-      vpRotationMatrix dRg;
-      dTg.extract(dRg);
-      vpTranslationVector dttg;
-      dTg.extract(dttg);
-      vpMatrix dtgSk = dttg.skew();
-      vpMatrix dfg=transInvK*(dtgSk*(dRg*invK));
-      vpMatrix fdg=dfg.inverseByQR(); //TODO
-      vpImagePoint pg;
+  //récupération de K^-1 et sa transposée
+  vpMatrix invK=cam.get_K_inverse();
+  vpMatrix tInvK=invK.transpose();
+  //récupération de la matrice de rotation dRg et de [dtg]
+  vpHomogeneousMatrix dTg = dMo * gMo.inverse();
+  dTg = dTg.inverse();
+  vpRotationMatrix dRg; vpTranslationVector dttg;
+  dTg.extract(dRg); dTg.extract(dttg);
+  vpMatrix dtgSkew = dttg.skew();
+  //calcul de la matrice fondamentale
+  vpMatrix dFg = tInvK*(dtgSkew*(dRg*invK));
+  
 
   for (int i=0 ; i < 5 ; i++)
     {
@@ -107,40 +113,82 @@ int main()
       
       
       vpDisplay::displayCross(Id,pd,5,vpColor::red) ;
-      
-      int u1 = pd.get_u();
-      int v1 = pd.get_v();
-      vpColVector vpd(3);
-      vpd[0]=u1;
-      vpd[1]=v1;
-      vpd[2]=1;
-      u1=0;
-      
-      vpColVector line = dfg*vpd;
-      
-      
-      int u2 = Ig.getWidth();
-      int v2 = v1;
-      
-      vpDisplay::displayLine(Ig,v1,u1,v2,u2,vpColor::lightGreen);
-      
+
+
       // Calcul du lieu geometrique
-      //....
+      vpColVector vpd(3);
+      vpd[0]=pd.get_u(); vpd[1]=pd.get_v(); vpd[2]=1;
+      
+      vpColVector line=dFg*vpd;
+      
+      int u1,v1,u2,v2;
+      u1=0; 
+      u2=Ig.getWidth(); 
+      v1 = (-line[2]-line[0]*u1)/line[1];
+      v2 = (-line[2]-line[0]*u2)/line[1];
 
 
       // Affichage dans Ig
       
-      //      vpDisplay::displayXXXX(Ig,...) ;
+      vpDisplay::displayLine(Ig,v1,u1,v2,u2,vpColor::lightGreen) ;
 
       vpDisplay::flush(Id) ;
       vpDisplay::flush(Ig) ;
     }
+    
+   ////*POUR POINT DANS IG ET LIGNE DANS ID*////
+  /*vpImagePoint pg ; 
+  
+  //récupération de K^-1 et sa transposée
+  vpMatrix invK=cam.get_K_inverse();
+  vpMatrix tInvK=invK.transpose();
+  //récupération de la matrice de rotation gRd et de [gtd]
+  vpHomogeneousMatrix gTd = gMo * dMo.inverse();
+  gTd = gTd.inverse();
+  vpRotationMatrix gRd; vpTranslationVector gttd;
+  gTd.extract(gRd); gTd.extract(gttd);
+  vpMatrix gtdSkew = gttd.skew();
+  //calcul de la matrice fondamentale
+  vpMatrix gFd = tInvK*(gtdSkew*(gRd*invK));
+  
+
+  for (int i=0 ; i < 5 ; i++)
+    {
+      cout << "Click point number " << i << endl ;
+      vpDisplay::getClick(Ig, pg) ;
+      
+      
+      vpDisplay::displayCross(Ig,pg,5,vpColor::red) ;
+
+
+      // Calcul du lieu geometrique
+      vpColVector vpg(3);
+      vpg[0]=pg.get_u(); vpg[1]=pg.get_v(); vpg[2]=1;
+      
+      vpColVector line=gFd*vpg;
+      
+      int u1,v1,u2,v2;
+      u1=0; 
+      u2=Id.getWidth(); 
+      v1 = (-line[2]-line[0]*u1)/line[1];
+      v2 = (-line[2]-line[0]*u2)/line[1];
+
+
+      // Affichage dans Id
+      
+      vpDisplay::displayLine(Id,v1,u1,v2,u2,vpColor::lightGreen) ;
+
+      vpDisplay::flush(Ig) ;
+      vpDisplay::flush(Id) ;
+    }*/
 
   // exemple de code pour sauvegarder une image avec les plan overlay
-  vpImage<vpRGBa> Icol ;
-  vpDisplay::getImage(Ig,Icol) ;
-  vpImageIo::write(Icol,"resultat.pgm") ;
-  vpImageIo::write(Ig,"I1g.pgm") ;
+  vpImage<vpRGBa> IcolG, IcolD;
+  vpDisplay::getImage(Ig,IcolG) ;
+  vpDisplay::getImage(Id,IcolD);
+  vpImageIo::write(IcolG,"I1g.pgm") ;
+  vpImageIo::write(IcolD,"I1d.pgm") ;
+  //vpImageIo::write(Ig,"I1g.pgm");
 
   
 
