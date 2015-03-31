@@ -18,14 +18,16 @@ void DLT(unsigned int n,
 {
   
   // NBPTMIN points son necessaire ; remplace le 1e6 par ce nombre
-#define NBPTMIN 1e6 
+#define NBPTMIN 3 
   if(n<    NBPTMIN )
   {
     cout << "there must be at least " << NBPTMIN <<  " points in the both images\n" <<endl  ;
     throw ;
   }
+  cout<<p1[0].get_u()<<" "<<p1[0].get_v()<<endl;
+  cout<<p2[0].get_u()<<" "<<p2[0].get_v()<<endl;
 
-  // ...
+
 
 }
 
