@@ -55,6 +55,10 @@ void DLT(unsigned int n,
         gamma[i*2+1][8] = -p2[i].get_u(); 
 
     }
+
+    vpMatrix v;
+    vpColVector d;
+    gamma.svd(d, v);
 }
 
 
