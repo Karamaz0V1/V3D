@@ -67,10 +67,10 @@ int main()
   cout << gMo << endl ;
 
   // I1d décalage 10cm a droite de I1g
-  /*vpHomogeneousMatrix dMo(0.1,0,2, 
-			  vpMath::rad(0),vpMath::rad(0),vpMath::rad(0)) ; */
+  /*vpHomogeneousMatrix dMo(-0.1,0,2, 
+			  vpMath::rad(0),vpMath::rad(0),vpMath::rad(0)) ; 
   // I1d décalage 20cm devant I1g
-  /*vpHomogeneousMatrix dMo(0,0,1.8, 
+  vpHomogeneousMatrix dMo(0,0,1.8, 
 			  vpMath::rad(0),vpMath::rad(0),vpMath::rad(0)) ; */
   // I1d décalage origine
   vpHomogeneousMatrix dMo(0.1,0,1.9, 
@@ -97,13 +97,12 @@ int main()
   vpMatrix invK=cam.get_K_inverse();
   vpMatrix tInvK=invK.transpose();
   //récupération de la matrice de rotation dRg et de [dtg]
-  vpHomogeneousMatrix dTg = dMo * gMo.inverse();
-  dTg = dTg.inverse();
-  vpRotationMatrix dRg; vpTranslationVector dttg;
-  dTg.extract(dRg); dTg.extract(dttg);
-  vpMatrix dtgSkew = dttg.skew();
+  vpHomogeneousMatrix gTd = gMo * dMo.inverse();
+  vpRotationMatrix gRd; vpTranslationVector gttd;
+  gTd.extract(gRd); gTd.extract(gttd);
+  vpMatrix gtdSkew = gttd.skew();
   //calcul de la matrice fondamentale
-  vpMatrix dFg = tInvK*(dtgSkew*(dRg*invK));
+  vpMatrix gFd = tInvK*(gtdSkew*(gRd*invK));
   
 
   for (int i=0 ; i < 5 ; i++)
@@ -119,7 +118,7 @@ int main()
       vpColVector vpd(3);
       vpd[0]=pd.get_u(); vpd[1]=pd.get_v(); vpd[2]=1;
       
-      vpColVector line=dFg*vpd;
+      vpColVector line=gFd*vpd;
       
       int u1,v1,u2,v2;
       u1=0; 
@@ -142,14 +141,13 @@ int main()
   //récupération de K^-1 et sa transposée
   vpMatrix invK=cam.get_K_inverse();
   vpMatrix tInvK=invK.transpose();
-  //récupération de la matrice de rotation gRd et de [gtd]
-  vpHomogeneousMatrix gTd = gMo * dMo.inverse();
-  gTd = gTd.inverse();
-  vpRotationMatrix gRd; vpTranslationVector gttd;
-  gTd.extract(gRd); gTd.extract(gttd);
-  vpMatrix gtdSkew = gttd.skew();
+  //récupération de la matrice de rotation dRg et de [dtg]
+  vpHomogeneousMatrix dTg = dMo * gMo.inverse();
+  vpRotationMatrix dRg; vpTranslationVector dttg;
+  dTg.extract(dRg); dTg.extract(dttg);
+  vpMatrix dtgSkew = dttg.skew();
   //calcul de la matrice fondamentale
-  vpMatrix gFd = tInvK*(gtdSkew*(gRd*invK));
+  vpMatrix dFg = tInvK*(dtgSkew*(dRg*invK));
   
 
   for (int i=0 ; i < 5 ; i++)
@@ -165,7 +163,7 @@ int main()
       vpColVector vpg(3);
       vpg[0]=pg.get_u(); vpg[1]=pg.get_v(); vpg[2]=1;
       
-      vpColVector line=gFd*vpg;
+      vpColVector line=dFg*vpg;
       
       int u1,v1,u2,v2;
       u1=0; 
