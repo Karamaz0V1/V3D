@@ -38,7 +38,7 @@ void ewta(vpImage<unsigned char> Id, vpImage<unsigned char> Ig) {
                best=jd;
             }
          }
-         distMap[el][jg]=jg-best;
+         distMap[el][jg]=best-jg;
          erreurMin=256;
       }
    }
@@ -53,21 +53,11 @@ void essd(vpImage<unsigned char> Id, vpImage<unsigned char> Ig) {
    sizeWindow = 1;
    sizeWindow = 3;
    sizeWindow = 7;
-   sizeWindow = 15;
-   sizeWindow = 20;
+   //sizeWindow = 15;
+   //sizeWindow = 20;
    int m=sizeWindow/2;
    int erreurMin=65632;
    
-   /*for(int i=0; i<m; i++) {
-      for(int j=0; j<m; j++) {
-         distMap[i][j]=0;
-      }
-   }
-   for(int i=Ig.getHeight()-m; i<Ig.getHeight(); i++) {
-      for(int j=Ig.getWidth()-m; j<Ig.getWidth(); j++) {
-         distMap[i][j]=0;
-      }
-   }*/
    for(int i=m; i<Ig.getHeight()-m; i++) {
       for(int jg=m; jg<Ig.getWidth()-m; jg++) {              //pour chaque pixel
             int bestDisp;
@@ -75,8 +65,8 @@ void essd(vpImage<unsigned char> Id, vpImage<unsigned char> Ig) {
                int erreur=0;
                for(int k=i-m; k<i+m; k++) {
                   for(int lg=jg-m; lg<jg+m; lg++) {          //pour chaque pixel de la fenêtre
-                     int ld = lg + jg - jd;
-                     erreur=erreur+pow(Id[k][ld]-Ig[k][lg],2);
+                     int ld = lg + jd - jg;
+                     erreur=erreur+pow(Id[k][lg]-Ig[k][ld],2);
                   }
                }
                if(erreur<erreurMin) {
@@ -84,7 +74,7 @@ void essd(vpImage<unsigned char> Id, vpImage<unsigned char> Ig) {
                   bestDisp=jd;
                }
             }
-            distMap[i][jg]=jg-bestDisp;
+            distMap[i][jg]=bestDisp-jg;
             erreurMin=65632;
       }
    }
