@@ -77,17 +77,19 @@ void DLT(unsigned int n,
     H12[2][0] = v[6][8] / v[8][8];
     H12[2][1] = v[7][8] / v[8][8];
     H12[2][2] = v[8][8] / v[8][8];
+    vpMatrix H21 = H12.inverseByLU();
+    H12 = H21;
 }
 
 void pointToM(const vpImagePoint & point, vpColVector & pointm) {
-    pointm[0] = point.get_v();
-    pointm[1] = point.get_u();
+    pointm[0] = point.get_u();
+    pointm[1] = point.get_v();
     pointm[2] = 1;
 }
 
 void MtoPoint(const vpColVector & pointm, vpImagePoint & point) {
-    point.set_v(pointm[0]);
-    point.set_u(pointm[1]);
+    point.set_u(pointm[0]);
+    point.set_v(pointm[1]);
 }
 
 int main()
@@ -163,9 +165,9 @@ int main()
 
       vpColVector p2m(3);
       pointToM(p2[i],p2m);
-
       vpColVector p1m = H12 * p2m;
-      //p1m /= p1m[2] ;
+      
+      p1m /= p1m[2] ;
 
       MtoPoint(p1m, p1_calcule);
 
@@ -193,9 +195,6 @@ int main()
 
   vpDisplay::close(I2) ;
   vpDisplay::close(I1) ;
-
-
-  
 
   return 0;
 }
