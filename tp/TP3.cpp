@@ -53,14 +53,44 @@ void DLT(unsigned int n,
         gamma[i*2+1][6] = -p2[i].get_u() * p1[i].get_u(); 
         gamma[i*2+1][7] = -p2[i].get_u() * p1[i].get_v(); 
         gamma[i*2+1][8] = -p2[i].get_u(); 
-
     }
 
+    std::cout<<gamma<<std::endl;
     vpMatrix v;
     vpColVector d;
     gamma.svd(d, v);
+    std::cout<<"V : \n"<<v<<std::endl;
+    std::cout<<"D : \n"<<d<<std::endl;
+
+//    for (int i=0; i<9; i++) {
+//        float min = v[i][0];
+//        int jmin = 0;
+//        for (int j=1; j<9; j++)
+//            if (v[i][j] < min) { jmin = j; min = v[i][j];}
+
+    H12[0][0] = v[0][8] / v[8][8];
+    H12[0][1] = v[1][8] / v[8][8];
+    H12[0][2] = v[2][8] / v[8][8];
+    H12[1][0] = v[3][8] / v[8][8];
+    H12[1][1] = v[4][8] / v[8][8];
+    H12[1][2] = v[5][8] / v[8][8];
+    H12[2][0] = v[6][8] / v[8][8];
+    H12[2][1] = v[7][8] / v[8][8];
+    H12[2][2] = v[8][8] / v[8][8];
+    vpMatrix H21 = H12.inverseByLU();
+    H12 = H21;
 }
 
+void pointToM(const vpImagePoint & point, vpColVector & pointm) {
+    pointm[0] = point.get_u();
+    pointm[1] = point.get_v();
+    pointm[2] = 1;
+}
+
+void MtoPoint(const vpColVector & pointm, vpImagePoint & point) {
+    point.set_u(pointm[0]);
+    point.set_v(pointm[1]);
+}
 
 int main()
 {
@@ -119,7 +149,7 @@ int main()
   
 
   // Calculer l'homographie
-  vpMatrix H12 ;
+  vpMatrix H12(3,3) ;
   DLT(nb,p1, p2, H12) ;
 
   cout << "Homographie H12 : " <<endl ; 
@@ -132,13 +162,24 @@ int main()
       // Connaissant le formule permettant le transfert des points p2 dans p1
       // Calculer les coordonnées des point p1 connaissant p2 et dHg
       vpImagePoint p1_calcule  ;
+
+      vpColVector p2m(3);
+      pointToM(p2[i],p2m);
+      vpColVector p1m = H12 * p2m;
+      
+      p1m /= p1m[2] ;
+
+      MtoPoint(p1m, p1_calcule);
+
+      
       //    p1_calcule  = ... ;
 
       // en deduire l'erreur sur commise sur chaque point et 
       // afficher un cercle de rayon 10 fois cette erreur
       double r ;
       //      r = ... ;
-      cout << "point " <<i << "  " << r <<endl ;;
+      r = vpImagePoint::distance(p1_calcule, p1[i]);
+      //cout << "point " <<i << "  " << r <<endl ;;
       double rayon ;
       rayon = sqrt(r)*10 ; if (rayon < 10) rayon =10 ;
       vpDisplay::displayCircle(I1,p1_calcule,rayon,vpColor::green) ; ;
@@ -154,9 +195,6 @@ int main()
 
   vpDisplay::close(I2) ;
   vpDisplay::close(I1) ;
-
-
-  
 
   return 0;
 }
