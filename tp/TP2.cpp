@@ -38,23 +38,48 @@ void ewta(vpImage<unsigned char> Id, vpImage<unsigned char> Ig) {
                best=jd;
             }
          }
-         distMap[el][jg]=max(0,min(255,abs(jg-best)));
+         distMap[el][jg]=best-jg;
          erreurMin=256;
       }
    }
    vpImageConvert::convert(distMap,distMapC);
    vpImageIo::write(distMapC,"tsubuka_distMap.pgm") ;
 }
+
 void essd(vpImage<unsigned char> Id, vpImage<unsigned char> Ig) {
    vpImage<float> distMap(144,192,0);
    vpImage<unsigned char> distMapC(144,192,0);
+   int sizeWindow;
+   sizeWindow = 1;
+   sizeWindow = 3;
+   sizeWindow = 7;
+   //sizeWindow = 15;
+   //sizeWindow = 20;
+   int m=sizeWindow/2;
+   int erreurMin=65632;
    
-   for(int i=0; i<Ig.getHeight; i++) {
-      for(int j=0; j<Ig.getWidth; j++) {              //pour chaque pixel
-         for(disp=0; disp<256; disp++) {               //pour chaque disparité
-            for(k=0; k<sizeWindow; k++) {
-               for(l=0; l<sizeWindow; l++) {          //pour chaque pixel de la fenêtre
-                  erreur=erreur+pow(Ig[,2);
+   for(int i=m; i<Ig.getHeight()-m; i++) {
+      for(int jg=m; jg<Ig.getWidth()-m; jg++) {              //pour chaque pixel
+            int bestDisp;
+            for(int jd=m; jd<Id.getWidth()-m;jd++) {             
+               int erreur=0;
+               for(int k=i-m; k<i+m; k++) {
+                  for(int lg=jg-m; lg<jg+m; lg++) {          //pour chaque pixel de la fenêtre
+                     int ld = lg + jd - jg;
+                     erreur=erreur+pow(Id[k][lg]-Ig[k][ld],2);
+                  }
+               }
+               if(erreur<erreurMin) {
+                  erreurMin=erreur;
+                  bestDisp=jd;
+               }
+            }
+            distMap[i][jg]=bestDisp-jg;
+            erreurMin=65632;
+      }
+   }
+   vpImageConvert::convert(distMap,distMapC);
+   vpImageIo::write(distMapC,"tsubuka_distMap_SSD.pgm") ;
 }
 
 int main()
