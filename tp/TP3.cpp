@@ -196,20 +196,20 @@ int main()
   vpDisplay::close(I2) ;
   vpDisplay::close(I1) ;
 
-  vpImage<unsigned char> Ir(1000,1000);
+  vpImage<unsigned char> Ir(700,700);
   for (int i=0; i<Ir.getHeight(); i++)
       for (int j=0; j<Ir.getWidth(); j++) {
-          if (i<I1.getHeight() && j<I1.getWidth()) Ir[i][j] = I1[i][j];
+          if (i<I1.getHeight() && j<I1.getWidth()) Ir[i][j] = I1[i][j] / 2;
           vpColVector p2(3);
-          p2[0] = i;
-          p2[1] = j;
+          p2[0] = j;
+          p2[1] = i;
           p2[2] = 1;
           vpMatrix H21 = H12.inverseByLU();
           vpColVector pr = H21 * p2;
           pr /= pr[2];
           int i2 = pr[1];
           int j2 = pr[0];
-          if (i2<I2.getHeight() && j2<I2.getWidth()) Ir[i][j] = I2[i2][j2];
+          if (i2<I2.getHeight() && j2<I2.getWidth()) Ir[i][j] += I2[i2][j2] / 2;
       }
 
   vpDisplayX d3(Ir,450,10,"Ir") ;
