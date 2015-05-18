@@ -73,14 +73,130 @@ void AfficheAppariement(
 }
 //*/
 
-
-void DLT()
+// Calculer l'homographie aHb a partir des coordonnees des point p1 et p2
+void DLT(unsigned int n,
+	 vpImagePoint *p1,
+	 vpImagePoint *p2,
+	 vpMatrix &H12)
 {
 
+    // NBPTMIN points son necessaire ; remplace le 1e6 par ce nombre
+#define NBPTMIN 3 
+    if(n<    NBPTMIN )
+    {
+    cout << "there must be at least " << NBPTMIN <<  " points in the both images\n" <<endl  ;
+    throw ;
+    }
+    cout<<p1[0].get_u()<<" "<<p1[0].get_v()<<endl;
+    cout<<p2[0].get_u()<<" "<<p2[0].get_v()<<endl;
+
+    vpMatrix gamma(2*n,9);
+
+    for (int i=0; i<n; i++) {
+        gamma[i*2][0] = 0;
+        gamma[i*2][1] = 0; 
+        gamma[i*2][2] = 0; 
+
+        gamma[i*2][3] = -1 * p1[i].get_u(); 
+        gamma[i*2][4] = -1 * p1[i].get_v(); 
+        gamma[i*2][5] = -1; 
+
+        gamma[i*2][6] = p2[i].get_v() * p1[i].get_u(); 
+        gamma[i*2][7] = p2[i].get_v() * p1[i].get_v(); 
+        gamma[i*2][8] = p2[i].get_v(); 
+
+        gamma[i*2+1][0] = p1[i].get_u(); 
+        gamma[i*2+1][1] = p1[i].get_v(); 
+        gamma[i*2+1][2] = 1; 
+
+        gamma[i*2+1][3] = 0;
+        gamma[i*2+1][4] = 0; 
+        gamma[i*2+1][5] = 0; 
+
+        gamma[i*2+1][6] = -p2[i].get_u() * p1[i].get_u(); 
+        gamma[i*2+1][7] = -p2[i].get_u() * p1[i].get_v(); 
+        gamma[i*2+1][8] = -p2[i].get_u(); 
+    }
+
+    std::cout<<gamma<<std::endl;
+    vpMatrix v;
+    vpColVector d;
+    gamma.svd(d, v);
+    std::cout<<"V : \n"<<v<<std::endl;
+    std::cout<<"D : \n"<<d<<std::endl;
+
+//    for (int i=0; i<9; i++) {
+//        float min = v[i][0];
+//        int jmin = 0;
+//        for (int j=1; j<9; j++)
+//            if (v[i][j] < min) { jmin = j; min = v[i][j];}
+
+    H12[0][0] = v[0][8] / v[8][8];
+    H12[0][1] = v[1][8] / v[8][8];
+    H12[0][2] = v[2][8] / v[8][8];
+    H12[1][0] = v[3][8] / v[8][8];
+    H12[1][1] = v[4][8] / v[8][8];
+    H12[1][2] = v[5][8] / v[8][8];
+    H12[2][0] = v[6][8] / v[8][8];
+    H12[2][1] = v[7][8] / v[8][8];
+    H12[2][2] = v[8][8] / v[8][8];
+    vpMatrix H21 = H12.inverseByLU();
+    H12 = H21;
 }
 
 
+void random_my_indexes(std::vector<int> & indexes, int ind_max, int nb_ind) {
+    for (int i = 0; i < nb_ind; i++) {
+        int new_ind;
+        bool notOk;
+        do {
+        new_ind = rand() % ind_max;
+        notOk = false;
+        for (int j = 0; j < i ; j++)
+            if (indexes[j] == new_ind) { 
+                notOk = true;
+                break;
+            }
+        } while (notOk);
+        indexes.push_back(new_ind);
+    }
+}
 
+void make_my_points_array(const std::vector<int> & indexes, const std::array<vpImagePoint, NBPOINTS> & first_list, const std::array<vpImagePoint, NBPOINTS> second_list, vpImagePoint * first_array, vpImagePoint * second_array) {
+    for (int i = 0; i < indexes.size(); i++) {
+        first_array[i] = first_list[indexes[i]];
+        first_array[i] = second_list[indexes[i]];
+    }
+}
+
+void pointToM(const vpImagePoint & point, vpColVector & pointm) {
+    pointm[0] = point.get_u();
+    pointm[1] = point.get_v();
+    pointm[2] = 1;
+}
+
+void MtoPoint(const vpColVector & pointm, vpImagePoint & point) {
+    point.set_u(pointm[0]);
+    point.set_v(pointm[1]);
+}
+
+vpImagePoint point_by_homography(const vpMatrix & H, const vpImagePoint & p1) {
+    vpImagePoint p2;
+
+    /*
+    vpColVector p1m(3);
+    pointToM(p1,p1m);
+
+    vpColVector p2m ;//= H * p1m;
+    //p2m /= p2m[2] ;
+
+    MtoPoint(p2m, p2);
+    */
+    return p2;
+}
+
+
+    
 int main()
 {
   vpImage<unsigned char> I1(300,400,0);
@@ -155,9 +271,19 @@ int main()
   vpDisplay::flush(I2) ;
 
   // Image resultat
-  vpImage<unsigned char> I ;
-  I.resize(I1.getRows(), I1.getCols()*2) ;
+  vpImage<unsigned char> I(max(I1.getHeight(), I2.getHeight()), I1.getWidth() + I2.getWidth());
+
+  for (int i = 0; i < I1.getHeight(); i++)
+      for (int j = 0; j < I1.getWidth(); j++)
+          I[i][j] = I1[i][j];
+
+  for (int i = 0; i < I2.getHeight(); i++)
+      for (int j = 0; j < I2.getWidth(); j++)
+          I[i][j + I1.getWidth()] = I2[i][j];
+
   vpDisplayX d(I,10,400,"I") ;
+  vpDisplay::display(I) ;
+  vpDisplay::flush(I) ;
 
   //vpKeyPointSurf surf;
   //surf.setDescriptorType(vpKeyPointSurf::extendedDescriptor) ; 	
@@ -184,20 +310,43 @@ int main()
   if(nb >= 0){ // ... add paired points to vectPts
     
     for(unsigned int i=0; i<nb; i++)
-      {
-	//surf.getMatchedPoints(i, p1[i], p2[i]);
-	char s[10] ;
-	sprintf(s,"%d",i) ;
-	cout << i <<"  "  << p1[i].get_u() <<"  " << p1[i].get_v() <<"  " ;
-	  cout <<  p2[i].get_u() <<"  " << p2[i].get_v() << endl;
-	vpDisplay::displayCharString(I1,p1[i],s,vpColor::yellow) ;
-	vpDisplay::displayCharString(I2,p2[i],s,vpColor::yellow) ;
-      }
+    {
+        //surf.getMatchedPoints(i, p1[i], p2[i]);
+        char s[10] ;
+        sprintf(s,"%d",i) ;
+        cout << i <<"  "  << p1[i].get_u() <<"  " << p1[i].get_v() <<"  " ;
+        cout <<  p2[i].get_u() <<"  " << p2[i].get_v() << endl;
+        vpDisplay::displayCharString(I1,p1[i],s,vpColor::yellow) ;
+        vpDisplay::displayCharString(I2,p2[i],s,vpColor::yellow) ;
+
+        vpImagePoint p2_inline = vpImagePoint(p2[i].get_i(), p2[i].get_j() + I1.getWidth());
+        vpDisplay::displayLine(I, p1[i], p2_inline, vpColor::green);
+    }
 
   }
+
+    vpDisplay::flush(I);
     vpDisplay::flush(I1);
     vpDisplay::flush(I2);
-    vpDisplay::getClick(I1);
+    vpDisplay::getClick(I);
+
+    
+    int nb_points_h = 4;
+    std::vector<int> indexes;
+    random_my_indexes(indexes, NBPOINTS, nb_points_h);
+    
+    for (int i = 0; i < indexes.size(); i++)
+        std::cout << "Index : " << indexes[i] << std::endl;
+
+    vpImagePoint point1_h[nb_points_h];
+    vpImagePoint point2_h[nb_points_h];
+    make_my_points_array(indexes, p1, p2, point1_h, point2_h);
+    vpMatrix H12(3,3);
+    DLT(nb_points_h, point1_h, point2_h, H12);
+
+    for (int i = 0; i < NBPOINTS; i++ ) {
+        vpImagePoint point_2_computed ;//= point_by_homography(H12, p1[i]);
+    }
 
   return 0;
 }
