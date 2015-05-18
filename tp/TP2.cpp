@@ -10,23 +10,11 @@
 
 using namespace std ;
 
-vpImage<unsigned char> rescale_value(vpImage<unsigned char> im1, vpImage<unsigned char> im2) {
-   vpImage<unsigned char> tmp(144,192,0);
-   }
 
-int max(int a, int b) {
-   if(a<b) return b;
-   return a;
-}
-
-int min(int a, int b) {
-   if(a<b) return a;
-   return b;
-}
-
+//TODO à revoir, sait-on jamais
 void ewta(vpImage<unsigned char> Id, vpImage<unsigned char> Ig) {
-  vpImage<float> distMap(144,192,0);
-  vpImage<unsigned char> distMapC(144,192,0);
+  vpImage<float> distMap(Id.getHeight(),Id.getWidth(),0);
+  vpImage<unsigned char> distMapC(Id.getHeight(),Id.getWidth(),0);
   int erreurMin=256;
   for(int el=0; el<Ig.getHeight(); el++) {            //pour chaque ligne épipolaire
       for(int jg=0; jg<Ig.getWidth(); jg++) {         //pour chaque pixel de la ligne courante dans l'image de gauche
@@ -46,15 +34,10 @@ void ewta(vpImage<unsigned char> Id, vpImage<unsigned char> Ig) {
    vpImageIo::write(distMapC,"tsubuka_distMap.pgm") ;
 }
 
-void essd(vpImage<unsigned char> Id, vpImage<unsigned char> Ig) {
-   vpImage<float> distMap(144,192,0);
-   vpImage<unsigned char> distMapC(144,192,0);
-   int sizeWindow;
-   sizeWindow = 1;
-   sizeWindow = 3;
-   sizeWindow = 7;
-   //sizeWindow = 15;
-   //sizeWindow = 20;
+/*
+void essd(vpImage<unsigned char> Id, vpImage<unsigned char> Ig,int sizeWindow) {
+   vpImage<float> distMap(Id.getHeight(),Id.getWidth(),0);
+   vpImage<unsigned char> distMapC(Id.getHeight(),Id.getWidth(),0);
    int m=sizeWindow/2;
    int erreurMin=65632;
    
@@ -81,14 +64,75 @@ void essd(vpImage<unsigned char> Id, vpImage<unsigned char> Ig) {
    vpImageConvert::convert(distMap,distMapC);
    vpImageIo::write(distMapC,"tsubuka_distMap_SSD.pgm") ;
 }
+*/
+
+void essd(vpImage<unsigned char> Id, vpImage<unsigned char> Ig,int sizeWindow) {
+   int med = sizeWindow/2;
+   vpImage<float> distMap(Id.getHeight(),Id.getWidth(),0);
+   vpImage<unsigned char> distMapC(Id.getHeight(),Id.getWidth(),0);
+   
+   //Création du masque
+   
+   vpImage<double> masque(sizeWindow,sizeWindow,1);
+   if(sizeWindow == 3) {
+      masque[0][0]= 1;
+      masque[0][1]= 2;
+      masque[0][2]= 1;
+      masque[1][0]= 2;
+      masque[1][1]= 4;
+      masque[1][2]= 2;
+      masque[2][0]= 1;
+      masque[2][1]= 2;
+      masque[2][2]= 1;
+   } 
+   
+   for(int i = med; i < Ig.getHeight()-med; i++) {
+      for(int jg = med; jg < Ig.getWidth()-med; jg++) {      //pour chaque pixel de l'image Ig
+         float erreurMin = 65632;
+         int a = 0;
+         float val = 0.0;
+         for(int jd = 0; jd < Id.getWidth(); jd++) {        //sur toute la largeur de l'image Id
+            val = 0.0;
+            if(masque.getWidth()==1)
+               val = (Id[i][jd] - Ig[i][jg]) * (Id[i][jd] - Ig[i][jg]);
+            else {
+               for(int h = 0; h < masque.getHeight(); h++) {
+                  for(int w = 0; w < masque.getWidth(); w++) {
+                     val = val + masque[h][w] * (Id[i-med+h][jd-med+w] - Ig[i-med+h][jg-med+w]) * (Id[i-med+h][jd-med+w] - Ig[i-med+h][jg-med+w]);
+                  }
+               }
+            }
+            if(val<erreurMin) {
+               erreurMin = val;
+               if(abs(jd-jg) > 255)
+                  distMap[i][jg] = 0;
+               else
+                  distMap[i][jg] = abs(jd-jg);
+            }
+         }
+      }
+   }
+   vpImageConvert::convert(distMap,distMapC);
+   vpImageIo::write(distMapC,"tsubuka_distMap_SSD.pgm") ;
+}
+   
+   
+
+void distMap(vpImage<unsigned char> Id,vpImage<unsigned char> Ig) {
+   //ewta(Id,Ig);
+   int sizeWindow=1;
+   sizeWindow = 3;
+   sizeWindow = 7;
+   //sizeWindow = 15;
+   //sizeWindow = 20;
+   essd(Id,Ig,sizeWindow);
+}
 
 int main()
 {
   vpImage<unsigned char> Ig(144,192,0);
   vpImage<unsigned char> Id(144,192,0);
   vpImageIo::read(Id,"../data/tsukuba-r.pgm") ;
-  vpImageIo::read(Ig,"../data/tsukuba-l.pgm") ;
-  
-  ewta(Id,Ig);
-  essd(Id,Ig);
+  vpImageIo::read(Ig,"../data/tsukuba-l.pgm") ;  
+  distMap(Id,Ig);
 }
