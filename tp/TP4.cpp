@@ -87,9 +87,6 @@ void DLT(unsigned int n,
     cout << "there must be at least " << NBPTMIN <<  " points in the both images\n" <<endl  ;
     throw ;
     }
-    cout<<p1[0].get_u()<<" "<<p1[0].get_v()<<endl;
-    cout<<p2[0].get_u()<<" "<<p2[0].get_v()<<endl;
-
     vpMatrix gamma(2*n,9);
 
     for (int i=0; i<n; i++) {
@@ -165,7 +162,7 @@ void random_my_indexes(std::vector<int> & indexes, int ind_max, int nb_ind) {
 void make_my_points_array(const std::vector<int> & indexes, const std::array<vpImagePoint, NBPOINTS> & first_list, const std::array<vpImagePoint, NBPOINTS> second_list, vpImagePoint * first_array, vpImagePoint * second_array) {
     for (int i = 0; i < indexes.size(); i++) {
         first_array[i] = first_list[indexes[i]];
-        first_array[i] = second_list[indexes[i]];
+        second_array[i] = second_list[indexes[i]];
     }
 }
 
@@ -183,15 +180,13 @@ void MtoPoint(const vpColVector & pointm, vpImagePoint & point) {
 vpImagePoint point_by_homography(const vpMatrix & H, const vpImagePoint & p1) {
     vpImagePoint p2;
 
-    /*
     vpColVector p1m(3);
     pointToM(p1,p1m);
 
-    vpColVector p2m ;//= H * p1m;
-    //p2m /= p2m[2] ;
+    vpColVector p2m = H * p1m;
+    p2m /= p2m[2] ;
 
     MtoPoint(p2m, p2);
-    */
     return p2;
 }
 
@@ -320,7 +315,7 @@ int main()
         vpDisplay::displayCharString(I2,p2[i],s,vpColor::yellow) ;
 
         vpImagePoint p2_inline = vpImagePoint(p2[i].get_i(), p2[i].get_j() + I1.getWidth());
-        vpDisplay::displayLine(I, p1[i], p2_inline, vpColor::green);
+        vpDisplay::displayLine(I, p1[i], p2_inline, vpColor::red);
     }
 
   }
@@ -331,22 +326,56 @@ int main()
     vpDisplay::getClick(I);
 
     
-    int nb_points_h = 4;
-    std::vector<int> indexes;
-    random_my_indexes(indexes, NBPOINTS, nb_points_h);
-    
-    for (int i = 0; i < indexes.size(); i++)
-        std::cout << "Index : " << indexes[i] << std::endl;
+    const int epsilon = 3;
+    const int nb_points_h = 5;
 
-    vpImagePoint point1_h[nb_points_h];
-    vpImagePoint point2_h[nb_points_h];
-    make_my_points_array(indexes, p1, p2, point1_h, point2_h);
-    vpMatrix H12(3,3);
-    DLT(nb_points_h, point1_h, point2_h, H12);
+    int best_score = 0;
+    vpMatrix best_homo;
+    for (int x = 0; x < 1000; x++) {
+        std::vector<int> indexes;
+        random_my_indexes(indexes, NBPOINTS, nb_points_h);
+        vpMatrix H12(3,3);
+        
+        for (int i = 0; i < indexes.size(); i++)
+            std::cout << "Index : " << indexes[i] << std::endl;
 
-    for (int i = 0; i < NBPOINTS; i++ ) {
-        vpImagePoint point_2_computed ;//= point_by_homography(H12, p1[i]);
+        vpImagePoint point1_h[nb_points_h];
+        vpImagePoint point2_h[nb_points_h];
+        make_my_points_array(indexes, p1, p2, point1_h, point2_h);
+        DLT(nb_points_h, point1_h, point2_h, H12);
+
+        int score = 0;
+        for (int i = 0; i < NBPOINTS; i++ ) {
+            vpImagePoint point_1_computed = point_by_homography(H12, p2[i]);
+            std::cout<<p1[i]<<" est estimé "<<point_1_computed<<std::endl;
+            if (abs(p1[i].get_u() - point_1_computed.get_u()) < epsilon) 
+                score ++;
+        }
+
+        if (score > best_score) {
+            best_homo = H12;
+            best_score = score;
+        }
     }
+
+    std::cout<<"Best score : "<<best_score<<std::endl;
+    vector<vpImagePoint> ransac_p1, ransac_p2;
+
+    for (int i = 0; i < NBPOINTS; i++) {
+        vpImagePoint point_1_computed = point_by_homography(best_homo, p2[i]);
+        if (abs(p1[i].get_u() - point_1_computed.get_u()) < epsilon) {
+            ransac_p1.push_back(p1[i]);
+            ransac_p2.push_back(p2[i]);
+        }
+    }
+ 
+    for(unsigned int i=0; i<ransac_p1.size(); i++)
+    {
+        vpImagePoint p2_inline = vpImagePoint(ransac_p2[i].get_i(), ransac_p2[i].get_j() + I1.getWidth());
+        vpDisplay::displayLine(I, ransac_p1[i], p2_inline, vpColor::green);
+    }
+    vpDisplay::flush(I);
+    vpDisplay::getClick(I);
 
   return 0;
 }
