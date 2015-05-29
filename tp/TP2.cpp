@@ -86,8 +86,8 @@ void essd(vpImage<unsigned char> Id, vpImage<unsigned char> Ig,int sizeWindow) {
       masque[2][2]= 1;
    } 
    
-   for(int i = med; i < Ig.getHeight()-med; i++) {
-      for(int jg = med; jg < Ig.getWidth()-med; jg++) {      //pour chaque pixel de l'image Ig
+   for(int i = 0; i < Ig.getHeight(); i++) {
+      for(int jg = 0; jg < Ig.getWidth(); jg++) {      //pour chaque pixel de l'image Ig
          float erreurMin = 65632;
          int a = 0;
          float val = 0.0;
