@@ -74,18 +74,13 @@ void AfficheAppariement(
 //*/
 
 // Calculer l'homographie aHb a partir des coordonnees des point p1 et p2
-void DLT(unsigned int n,
-	 vpImagePoint *p1,
-	 vpImagePoint *p2,
-	 vpMatrix &H12)
+void DLT(unsigned int n, const vector<vpImagePoint> & p1, const vector<vpImagePoint> & p2, vpMatrix &H12)
 {
 
-    // NBPTMIN points son necessaire ; remplace le 1e6 par ce nombre
-#define NBPTMIN 3 
-    if(n<    NBPTMIN )
-    {
-    cout << "there must be at least " << NBPTMIN <<  " points in the both images\n" <<endl  ;
-    throw ;
+#define NBPTMIN 4 
+    if(n < NBPTMIN ) {
+        cout << "there must be at least " << NBPTMIN <<  " points in the both images\n" <<endl  ;
+        throw ;
     }
     vpMatrix gamma(2*n,9);
 
@@ -122,12 +117,6 @@ void DLT(unsigned int n,
     std::cout<<"V : \n"<<v<<std::endl;
     std::cout<<"D : \n"<<d<<std::endl;
 
-//    for (int i=0; i<9; i++) {
-//        float min = v[i][0];
-//        int jmin = 0;
-//        for (int j=1; j<9; j++)
-//            if (v[i][j] < min) { jmin = j; min = v[i][j];}
-
     H12[0][0] = v[0][8] / v[8][8];
     H12[0][1] = v[1][8] / v[8][8];
     H12[0][2] = v[2][8] / v[8][8];
@@ -159,10 +148,10 @@ void random_my_indexes(std::vector<int> & indexes, int ind_max, int nb_ind) {
     }
 }
 
-void make_my_points_array(const std::vector<int> & indexes, const std::array<vpImagePoint, NBPOINTS> & first_list, const std::array<vpImagePoint, NBPOINTS> second_list, vpImagePoint * first_array, vpImagePoint * second_array) {
+void make_my_points_array(const std::vector<int> & indexes, const std::array<vpImagePoint, NBPOINTS> & first_list, const std::array<vpImagePoint, NBPOINTS> second_list, vector<vpImagePoint> & first_array, vector<vpImagePoint> & second_array) {
     for (int i = 0; i < indexes.size(); i++) {
-        first_array[i] = first_list[indexes[i]];
-        second_array[i] = second_list[indexes[i]];
+        first_array.push_back(first_list[indexes[i]]);
+        second_array.push_back(second_list[indexes[i]]);
     }
 }
 
@@ -190,7 +179,42 @@ vpImagePoint point_by_homography(const vpMatrix & H, const vpImagePoint & p1) {
     return p2;
 }
 
+vpMatrix ransac_homography(const array<vpImagePoint, NBPOINTS> & p1, const array<vpImagePoint, NBPOINTS> & p2, int nb_try = 100, int nb_points_h = 5, float epsilon = 3) {
+    int best_score = 0;
+    vpMatrix best_homo;
+    for (int x = 0; x < nb_try; x++) {
+        std::vector<int> indexes;
+        random_my_indexes(indexes, NBPOINTS, nb_points_h);
+        vector<vpImagePoint> point1_h, point2_h;
+        make_my_points_array(indexes, p1, p2, point1_h, point2_h);
+        vpMatrix H12(3,3);
+        DLT(nb_points_h, point1_h, point2_h, H12);
 
+        int score = 0;
+        for (int i = 0; i < NBPOINTS; i++ ) {
+            vpImagePoint point_1_computed = point_by_homography(H12, p2[i]);
+            if (abs(p1[i].get_u() - point_1_computed.get_u()) < epsilon) score ++;
+        }
+
+        if (score > best_score) {
+            best_homo = H12;
+            best_score = score;
+        }
+    }
+    return best_homo;
+}
+
+void ransac_full(const array<vpImagePoint, NBPOINTS> & p1, const array<vpImagePoint, NBPOINTS> & p2, vector<vpImagePoint> & p1_correct, vector<vpImagePoint> & p2_correct, int nb_try = 100, int nb_points_h = 5, float epsilon = 3) {
+    vpMatrix best_homo = ransac_homography(p1, p2, nb_try, nb_points_h, epsilon);
+
+    for (int i = 0; i < NBPOINTS; i++) {
+        vpImagePoint point_1_computed = point_by_homography(best_homo, p2[i]);
+        if (abs(p1[i].get_u() - point_1_computed.get_u()) < epsilon) {
+            p1_correct.push_back(p1[i]);
+            p2_correct.push_back(p2[i]);
+        }
+    }
+}
     
 int main()
 {
@@ -323,58 +347,31 @@ int main()
     vpDisplay::flush(I);
     vpDisplay::flush(I1);
     vpDisplay::flush(I2);
+
+    vpImage<vpRGBa> Ic ;
+    vpDisplay::getImage(I1,Ic) ;
+    vpImageIo::write(Ic,"resultat_I1.jpg") ;
+    vpDisplay::getImage(I2,Ic) ;
+    vpImageIo::write(Ic,"resultat_I2.jpg") ;
+    vpDisplay::getImage(I,Ic) ;
+    vpImageIo::write(Ic,"resultat_I.jpg") ;
+
+    std::cout<<"Waiting for click..."<<std::endl;
     vpDisplay::getClick(I);
 
+    // --- RANSAC ---
     
-    const int epsilon = 3;
-    const int nb_points_h = 5;
-
-    int best_score = 0;
-    vpMatrix best_homo;
-    for (int x = 0; x < 1000; x++) {
-        std::vector<int> indexes;
-        random_my_indexes(indexes, NBPOINTS, nb_points_h);
-        vpMatrix H12(3,3);
-        
-        for (int i = 0; i < indexes.size(); i++)
-            std::cout << "Index : " << indexes[i] << std::endl;
-
-        vpImagePoint point1_h[nb_points_h];
-        vpImagePoint point2_h[nb_points_h];
-        make_my_points_array(indexes, p1, p2, point1_h, point2_h);
-        DLT(nb_points_h, point1_h, point2_h, H12);
-
-        int score = 0;
-        for (int i = 0; i < NBPOINTS; i++ ) {
-            vpImagePoint point_1_computed = point_by_homography(H12, p2[i]);
-            std::cout<<p1[i]<<" est estimé "<<point_1_computed<<std::endl;
-            if (abs(p1[i].get_u() - point_1_computed.get_u()) < epsilon) 
-                score ++;
-        }
-
-        if (score > best_score) {
-            best_homo = H12;
-            best_score = score;
-        }
-    }
-
-    std::cout<<"Best score : "<<best_score<<std::endl;
     vector<vpImagePoint> ransac_p1, ransac_p2;
+    ransac_full(p1, p2, ransac_p1, ransac_p2);
 
-    for (int i = 0; i < NBPOINTS; i++) {
-        vpImagePoint point_1_computed = point_by_homography(best_homo, p2[i]);
-        if (abs(p1[i].get_u() - point_1_computed.get_u()) < epsilon) {
-            ransac_p1.push_back(p1[i]);
-            ransac_p2.push_back(p2[i]);
-        }
-    }
- 
     for(unsigned int i=0; i<ransac_p1.size(); i++)
     {
         vpImagePoint p2_inline = vpImagePoint(ransac_p2[i].get_i(), ransac_p2[i].get_j() + I1.getWidth());
         vpDisplay::displayLine(I, ransac_p1[i], p2_inline, vpColor::green);
     }
     vpDisplay::flush(I);
+    vpDisplay::getImage(I,Ic) ;
+    vpImageIo::write(Ic,"resultat_ransac.jpg") ;
     vpDisplay::getClick(I);
 
   return 0;

@@ -18,7 +18,7 @@ void DLT(unsigned int n,
 {
 
     // NBPTMIN points son necessaire ; remplace le 1e6 par ce nombre
-#define NBPTMIN 3 
+#define NBPTMIN 4 
     if(n<    NBPTMIN )
     {
     cout << "there must be at least " << NBPTMIN <<  " points in the both images\n" <<endl  ;
@@ -215,6 +215,7 @@ int main()
   vpDisplayX d3(Ir,450,10,"Ir") ;
   vpDisplay::display(Ir);
   vpDisplay::flush(Ir) ;
+  vpImageIo::write(Ir,"resultat_mosaic.jpg") ;
   vpDisplay::getClick(Ir) ;
   vpDisplay::close(Ir) ;
 
