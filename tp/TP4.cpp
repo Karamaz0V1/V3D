@@ -7,14 +7,16 @@
 #include <visp/vpDisplayX.h>
 #include <visp/vpKeyPointSurf.h>
 #include <visp/vpHomography.h>
-#include <array>
+#include "ransac.h"
 
 #define NBPOINTS 17
 
 
 using namespace std ;
 
-void magic(array<vpImagePoint, NBPOINTS> & p1, array<vpImagePoint, NBPOINTS> & p2) {
+void magic(vector<vpImagePoint> & p1, vector<vpImagePoint> & p2) {
+    p1.resize(NBPOINTS);
+    p2.resize(NBPOINTS);
     p1[0].set_u(117.5130997);   p1[0].set_v(62.34123611);   p2[0].set_u(202.841095);    p2[0].set_v(36.29648209);
     p1[1].set_u(84.06044006);   p1[1].set_v(67.55551147);   p2[1].set_u(169.5350189);   p2[1].set_v(26.80556679);
     p1[2].set_u(80.27194214);   p1[2].set_v(111.0672302);   p2[2].set_u(147.9641113);   p2[2].set_v(64.5475769);
@@ -73,6 +75,7 @@ void AfficheAppariement(
 }
 //*/
 
+/*
 // Calculer l'homographie aHb a partir des coordonnees des point p1 et p2
 void DLT(unsigned int n, const vector<vpImagePoint> & p1, const vector<vpImagePoint> & p2, vpMatrix &H12)
 {
@@ -148,7 +151,7 @@ void random_my_indexes(std::vector<int> & indexes, int ind_max, int nb_ind) {
     }
 }
 
-void make_my_points_array(const std::vector<int> & indexes, const std::array<vpImagePoint, NBPOINTS> & first_list, const std::array<vpImagePoint, NBPOINTS> second_list, vector<vpImagePoint> & first_array, vector<vpImagePoint> & second_array) {
+void make_my_points_array(const std::vector<int> & indexes, const std::vector<vpImagePoint> & first_list, const std::vector<vpImagePoint> second_list, vector<vpImagePoint> & first_array, vector<vpImagePoint> & second_array) {
     for (int i = 0; i < indexes.size(); i++) {
         first_array.push_back(first_list[indexes[i]]);
         second_array.push_back(second_list[indexes[i]]);
@@ -179,7 +182,7 @@ vpImagePoint point_by_homography(const vpMatrix & H, const vpImagePoint & p1) {
     return p2;
 }
 
-vpMatrix ransac_homography(const array<vpImagePoint, NBPOINTS> & p1, const array<vpImagePoint, NBPOINTS> & p2, int nb_try = 100, int nb_points_h = 5, float epsilon = 3) {
+vpMatrix ransac_homography(const vector<vpImagePoint> & p1, const vector<vpImagePoint> & p2, int nb_try = 100, int nb_points_h = 5, float epsilon = 3) {
     int best_score = 0;
     vpMatrix best_homo;
     for (int x = 0; x < nb_try; x++) {
@@ -204,7 +207,7 @@ vpMatrix ransac_homography(const array<vpImagePoint, NBPOINTS> & p1, const array
     return best_homo;
 }
 
-void ransac_full(const array<vpImagePoint, NBPOINTS> & p1, const array<vpImagePoint, NBPOINTS> & p2, vector<vpImagePoint> & p1_correct, vector<vpImagePoint> & p2_correct, int nb_try = 100, int nb_points_h = 5, float epsilon = 3) {
+void ransac_full(const vector<vpImagePoint> & p1, const vector<vpImagePoint> & p2, vector<vpImagePoint> & p1_correct, vector<vpImagePoint> & p2_correct, int nb_try = 100, int nb_points_h = 5, float epsilon = 3) {
     vpMatrix best_homo = ransac_homography(p1, p2, nb_try, nb_points_h, epsilon);
 
     for (int i = 0; i < NBPOINTS; i++) {
@@ -215,7 +218,7 @@ void ransac_full(const array<vpImagePoint, NBPOINTS> & p1, const array<vpImagePo
         }
     }
 }
-    
+*/   
 int main()
 {
   vpImage<unsigned char> I1(300,400,0);
@@ -322,7 +325,7 @@ int main()
   //Display the matched points
   //surf.display(I1, I2);
   //vpImagePoint p1[nb], p2[nb];
-  array<vpImagePoint, NBPOINTS> p1, p2;
+  vector<vpImagePoint> p1, p2;
   magic(p1, p2);
 
   int nb = NBPOINTS;
@@ -361,13 +364,19 @@ int main()
 
     // --- RANSAC ---
     
-    vector<vpImagePoint> ransac_p1, ransac_p2;
-    ransac_full(p1, p2, ransac_p1, ransac_p2);
+    //vector<vpImagePoint> ransac_p1, ransac_p2;
+    vector<int> state;
+    state.resize(NBPOINTS);
+    //ransac_full(p1, p2, ransac_p1, ransac_p2);
+    ransac_full(p1, p2, state);
 
-    for(unsigned int i=0; i<ransac_p1.size(); i++)
+    //for(unsigned int i=0; i<ransac_p1.size(); i++)
+    for(unsigned int i=0; i<p1.size(); i++)
     {
-        vpImagePoint p2_inline = vpImagePoint(ransac_p2[i].get_i(), ransac_p2[i].get_j() + I1.getWidth());
-        vpDisplay::displayLine(I, ransac_p1[i], p2_inline, vpColor::green);
+        if (state[i] == 3) {
+            vpImagePoint p2_inline = vpImagePoint(p2[i].get_i(), p2[i].get_j() + I1.getWidth());
+            vpDisplay::displayLine(I, p1[i], p2_inline, vpColor::green);
+        }
     }
     vpDisplay::flush(I);
     vpDisplay::getImage(I,Ic) ;
