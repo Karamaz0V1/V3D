@@ -8,6 +8,7 @@
 #include <visp/vpKeyPointSurf.h>
 #include <visp/vpHomography.h>
 #include "ransac.h"
+#include "vpBrief.h"
 
 #define NBPOINTS 17
 
@@ -275,7 +276,8 @@ int main()
 
   // I1d
   vpHomogeneousMatrix c1dMo(0.1,0,2, 
-			    vpMath::rad(0),vpMath::rad(0),vpMath::rad(25)) ; //0.1,0,2, vpMath::rad(0),vpMath::rad(0),0) ;
+			    //vpMath::rad(0),vpMath::rad(0),vpMath::rad(25)) ; //0.1,0,2, vpMath::rad(0),vpMath::rad(0),0) ;
+			    vpMath::rad(0),vpMath::rad(0),vpMath::rad(0)) ; //0.1,0,2, vpMath::rad(0),vpMath::rad(0),0) ;
   sim.setCameraPosition(c1dMo);
   sim.getImage(I2,cam);  
   cout << "Image I1d " <<endl ;
@@ -364,24 +366,32 @@ int main()
 
     // --- RANSAC ---
     
-    //vector<vpImagePoint> ransac_p1, ransac_p2;
-    vector<int> state;
+    vector<vpImagePoint> ransac_p1, ransac_p2;
+    vector<int> state, similarity;
     state.resize(NBPOINTS);
-    //ransac_full(p1, p2, ransac_p1, ransac_p2);
-    ransac_full(p1, p2, state);
+    similarity.resize(NBPOINTS);
+    ransac_full(p1, p2, ransac_p1, ransac_p2);
+    //ransac_full(p1, p2, similarity, state);
 
     //for(unsigned int i=0; i<ransac_p1.size(); i++)
     for(unsigned int i=0; i<p1.size(); i++)
     {
-        if (state[i] == 3) {
-            vpImagePoint p2_inline = vpImagePoint(p2[i].get_i(), p2[i].get_j() + I1.getWidth());
-            vpDisplay::displayLine(I, p1[i], p2_inline, vpColor::green);
-        }
+        //if (state[i] == 3) {
+            vpImagePoint p2_inline = vpImagePoint(ransac_p2[i].get_i(), ransac_p2[i].get_j() + I1.getWidth());
+            vpDisplay::displayLine(I, ransac_p1[i], p2_inline, vpColor::green);
+        //}
     }
     vpDisplay::flush(I);
     vpDisplay::getImage(I,Ic) ;
     vpImageIo::write(Ic,"resultat_ransac.jpg") ;
     vpDisplay::getClick(I);
+
+
+    vpImage<unsigned char> I1demo, I2demo;
+    //vpImageIo::read(I1demo,"01.jpg") ;
+    //vpImageIo::read(I2demo,"02.jpg") ;
+    vpBrief brief;
+    brief.demo(I1, I2);
 
   return 0;
 }

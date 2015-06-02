@@ -90,6 +90,13 @@ void make_my_points_array(const std::vector<int> & indexes, const std::vector<vp
     }
 }
 
+void make_my_points_array(const std::vector<int> & indexes, const std::vector<int> & similarity, const std::vector<vpImagePoint> & first_list, const std::vector<vpImagePoint> second_list, vector<vpImagePoint> & first_array, vector<vpImagePoint> & second_array) {
+    for (int i = 0; i < indexes.size(); i++) {
+        first_array.push_back(first_list[indexes[i]]);
+        second_array.push_back(second_list[similarity[indexes[i]]]);
+    }
+}
+
 void pointToM(const vpImagePoint & point, vpColVector & pointm) {
     pointm[0] = point.get_u();
     pointm[1] = point.get_v();
@@ -114,10 +121,47 @@ vpImagePoint point_by_homography(const vpMatrix & H, const vpImagePoint & p1) {
     return p2;
 }
 
+vpMatrix ransac_homography(const vector<vpImagePoint> & p1, const vector<vpImagePoint> & p2, const vector<int> & similarity, int nb_try, int nb_points_h, float epsilon) {
+    int best_score = 0;
+    vpMatrix best_homo;
+    for (int x = 0; x < nb_try; x++) {
+        std::cout<<"TRY "<<x<<std::endl;
+        std::vector<int> indexes;
+        bool fail = true;
+        while (fail) { // Random indexes until all point selected are matched, need refactor
+            indexes.clear();
+            random_my_indexes(indexes, p1.size(), nb_points_h);
+            fail = false;
+            for (int i = 0; i < nb_points_h; i++)
+                if (similarity[indexes[i]] == -1)
+                    fail = true;
+        }
+        vector<vpImagePoint> point1_h, point2_h;
+        make_my_points_array(indexes, similarity, p1, p2, point1_h, point2_h);
+        vpMatrix H12(3,3);
+        DLT(nb_points_h, point1_h, point2_h, H12);
+
+        int score = 0;
+        for (int i = 0; i < p1.size(); i++ ) {
+            vpImagePoint point_1_computed = point_by_homography(H12, p2[similarity[i]]);
+            if (p1[i].distance(p1[i], point_1_computed) < epsilon) score ++;
+        }
+
+        if (score > best_score) {
+            best_homo = H12;
+            best_score = score;
+        }
+    }
+    std::cout<<"Best Score : " <<best_score<<std::endl;
+    return best_homo;
+}
+
+
 vpMatrix ransac_homography(const vector<vpImagePoint> & p1, const vector<vpImagePoint> & p2, int nb_try, int nb_points_h, float epsilon) {
     int best_score = 0;
     vpMatrix best_homo;
     for (int x = 0; x < nb_try; x++) {
+        std::cout<<"TRY "<<x<<std::endl;
         std::vector<int> indexes;
         random_my_indexes(indexes, p1.size(), nb_points_h);
         vector<vpImagePoint> point1_h, point2_h;
@@ -140,15 +184,20 @@ vpMatrix ransac_homography(const vector<vpImagePoint> & p1, const vector<vpImage
     return best_homo;
 }
 
-void ransac_full(const vector<vpImagePoint> & p1, const vector<vpImagePoint> & p2, vector<int> & descriptors_state, int nb_try, int nb_points_h, float epsilon) {
-    vpMatrix best_homo = ransac_homography(p1, p2, nb_try, nb_points_h, epsilon);
+void ransac_full(const vector<vpImagePoint> & p1, const vector<vpImagePoint> & p2, const vector<int> & similarity, vector<int> & descriptors_state, int nb_try, int nb_points_h, float epsilon) {
+    vpMatrix best_homo = ransac_homography(p1, p2, similarity, nb_try, nb_points_h, epsilon);
 
+    int best_score = 0;
     for (int i = 0; i < p1.size(); i++) {
-        vpImagePoint point_1_computed = point_by_homography(best_homo, p2[i]);
-        if (p1[i].distance(p1[i], point_1_computed) < epsilon)
+        if (similarity[i] == -1) continue;
+        vpImagePoint point_1_computed = point_by_homography(best_homo, p2[similarity[i]]);
+        if (p1[i].distance(p1[i], point_1_computed) < epsilon) {
             descriptors_state[i] = 3;
-        //std::cout<<"State Score : " <<p1[i]<<" -> "<<point_1_computed<<" : "<<p1[i].distance(p1[i], point_1_computed)<<std::endl;
+            best_score ++;
+        std::cout<<"State Score : " <<p1[i]<<" -> "<<point_1_computed<<" : "<<p1[i].distance(p1[i], point_1_computed)<<std::endl;
+        }
     }
+    std::cout<<"Best Score : " <<best_score<<std::endl;
 }
 
 void ransac_full(const std::vector<vpImagePoint> & p1, const std::vector<vpImagePoint> & p2, std::vector<vpImagePoint> & p1_corrected, std::vector<vpImagePoint> & p2_corrected, int nb_try, int nb_points_h, float epsilon) {

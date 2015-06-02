@@ -11,4 +11,5 @@ ADD_EXECUTABLE(TP0 TP0.cpp)
 ADD_EXECUTABLE(TP1 TP1.cpp)
 ADD_EXECUTABLE(TP2 TP2.cpp)
 ADD_EXECUTABLE(TP3 TP3.cpp)
-ADD_EXECUTABLE(TP4 TP4.cpp ransac.cpp)
+ADD_EXECUTABLE(TP4 TP4.cpp ransac.cpp vpBrief.cpp function_opencv.cpp vpFast.cpp vpGetKeypointsFast.cpp)
+
